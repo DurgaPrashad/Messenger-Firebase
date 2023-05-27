@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Online Messenger</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    #message {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    #messages {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    #messages li {
+      margin-bottom: 10px;
+    }
+
+    button {
+      background-color: #dc3545;
+      color: #fff;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
+    .deleted-message {
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <h1>Online Messenger</h1>
+  
+  <form id="message-form">
+    <input id="message" placeholder="Enter message" autocomplete="off">
+    <input type="submit" value="Send">
+  </form>
+  
+  <ul id="messages"></ul>
+
+  <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-database.js"></script>
+  <script>
+    // Your web app's Firebase configuration
+    var firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID",
+      measurementId: "YOUR_MEASUREMENT_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    var myName = prompt("Enter your name");
+
+    document.getElementById("message-form").addEventListener("submit", function(e) {
+      e.preventDefault();
+      
+      // Get the message input
+      var messageInput = document.getElementById("message");
+      var message = messageInput.value.trim();
+
+      if (message !== "") {
+        // Save the message in the database
+        firebase.database().ref("messages").push().set({
+          sender: myName,
+          message: message
+        });
+
+        // Clear the message input field
+        messageInput.value = "";
+      }
+    });
+
+    function deleteMessage(self) {
+      // Get the message ID
+      var messageId = self.getAttribute("data-id");
+
+      // Delete the message from the database
+      firebase.database().ref("messages").child(messageId).remove();
+    }
+
+    // Listen for incoming messages
+    firebase.database().ref("messages").on("child_added", function (snapshot) {
+      var message = snapshot.val();
+
+      var li = document.createElement("li");
+      li.id = "message-" + snapshot.key;
+
+      if (message.sender === myName) {
+        var deleteButton = document.createElement("button");
+        deleteButton.textContent = "Delete";
+        deleteButton.setAttribute("data-id", snapshot.key);
+        deleteButton.onclick = function() {
+          deleteMessage(this);
+        };
+        li.appendChild(deleteButton);
+      }
+
+      var messageText = document.createElement("span");
+      messageText.textContent = message.sender + ": " + message.message;
+      li.appendChild(messageText);
+
+      document.getElementById("messages").appendChild(li);
+    });
+
+    // Attach listener for deleted messages
+    firebase.database().ref("messages").on("child_removed", function (snapshot) {
+      var messageElement = document.getElementById("message-" + snapshot.key);
+      if (messageElement) {
+        messageElement.classList.add("deleted-message");
+        messageElement.innerHTML = "This message has been removed";
+      }
+    });
+  </script>
+</body>
+</html>
