@@ -1,0 +1,264 @@
+<head>
+  <title>Online Messenger</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f9f9f9; /* Replace with your desired background color */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333; /* Replace with your desired color */
+    }
+
+    #message-form {
+      width: 100%;
+      display: flex;
+    }
+
+    #message {
+      flex: 1;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    #messages {
+      list-style-type: none;
+      padding: 0;
+      overflow-y: auto;
+      flex: 1;
+      width: 100%;
+    }
+
+    #messages li {
+      margin-bottom: 10px;
+    }
+
+    .message-container {
+      display: flex;
+      align-items: flex-start;
+    }
+
+    .message-container.sent {
+      justify-content: flex-end;
+    }
+
+    .message-container.received {
+      justify-content: flex-start;
+    }
+
+    .message-bubble {
+      background-color: #f2f2f2;
+      padding: 8px 12px;
+      border-radius: 10px;
+    }
+
+    .message-sender {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .deleted-message {
+      color: #999;
+    }
+
+    #menu-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: #333; /* Replace with your desired color */
+      color: #fff; /* Replace with your desired color */
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #menu-options {
+      position: absolute;
+      top: 40px;
+      right: 10px;
+      background-color: #fff; /* Replace with your desired background color */
+      border: 1px solid #ccc; /* Replace with your desired border color */
+      border-radius: 5px;
+      display: none;
+      padding: 10px;
+    }
+
+    .menu-option {
+      margin-bottom: 10px;
+    }
+
+    #logout-button {
+      background-color: #ff3333; /* Replace with your desired color */
+      color: #fff; /* Replace with your desired color */
+      padding: 5px 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>PRO Messenger</h1>
+
+  <button id="menu-button" onclick="toggleMenu()">Menu</button>
+  <div id="menu-options">
+    <div class="menu-option">
+      <button onclick="createGroup()">Create Group</button>
+    </div>
+    <div class="menu-option">
+      <button onclick="joinGroup()">Join Group</button>
+    </div>
+    <div class="menu-option">
+      <button onclick="searchUser()">Search User</button>
+    </div>
+    <div class="menu-option">
+      <button id="logout-button" onclick="signOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <ul id="messages"></ul>
+
+  <form id="message-form">
+    <input id="message" placeholder="Enter message" autocomplete="off">
+    <input type="submit" value="Send">
+  </form>
+
+  <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-database.js"></script>
+  <script>
+    // Your web app's Firebase configuration
+    var firebaseConfig = {
+ apiKey: "AIzaSyANlxWM6D1WM9OCgUqrumTScFdP-DOtZsY",
+  authDomain: "proups-67bfe.firebaseapp.com",
+ databaseURL: "https://proups-67bfe-default-rtdb.firebaseio.com",
+  projectId: "proups-67bfe",
+  storageBucket: "proups-67bfe.appspot.com",
+  messagingSenderId: "258842949723",
+  appId: "1:258842949723:web:f47a98b951c94745e3e77e",
+  measurementId: "G-8LG7FZWQMX"
+};
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+
+
+
+    var myName = prompt("Enter your user Id");
+    if (!myName.endsWith("@pro")) {
+      alert("Please enter a name ending with '@pro'");
+      window.location.href = "https://www.example.com"; // Redirect the user to a different page
+    }
+
+    document.getElementById("message-form").addEventListener("submit", function(e) {
+      e.preventDefault();
+      
+      // Get the message input
+      var messageInput = document.getElementById("message");
+      var message = messageInput.value.trim();
+
+      if (message !== "") {
+        // Save the message in the database
+        firebase.database().ref("messages").push().set({
+          sender: myName,
+          message: message
+        });
+
+        // Clear the message input field
+        messageInput.value = "";
+      }
+    });
+
+    function deleteMessage(self) {
+      // Get the message ID
+      var messageId = self.getAttribute("data-id");
+
+      // Delete the message from the database
+      firebase.database().ref("messages").child(messageId).remove();
+    }
+
+    // Listen for incoming messages
+    firebase.database().ref("messages").on("child_added", function (snapshot) {
+      var message = snapshot.val();
+
+      var li = document.createElement("li");
+      li.id = "message-" + snapshot.key;
+
+      var messageContainer = document.createElement("div");
+      var messageBubble = document.createElement("div");
+      messageBubble.classList.add("message-bubble");
+
+      if (message.sender === myName) {
+        messageContainer.classList.add("message-container", "sent");
+      } else {
+        messageContainer.classList.add("message-container", "received");
+
+        var messageSender = document.createElement("div");
+        messageSender.classList.add("message-sender");
+        messageSender.textContent = message.sender;
+        messageBubble.appendChild(messageSender);
+      }
+
+      var messageText = document.createElement("span");
+      messageText.textContent = message.message;
+      messageBubble.appendChild(messageText);
+
+      if (message.sender === myName) {
+        var deleteButton = document.createElement("button");
+        deleteButton.textContent = "Delete";
+        deleteButton.setAttribute("data-id", snapshot.key);
+        deleteButton.onclick = function() {
+          deleteMessage(this);
+        };
+        messageBubble.appendChild(deleteButton);
+      }
+
+      messageContainer.appendChild(messageBubble);
+      li.appendChild(messageContainer);
+
+      document.getElementById("messages").appendChild(li);
+    });
+
+    // Attach listener for deleted messages
+    firebase.database().ref("messages").on("child_removed", function (snapshot) {
+      var messageElement = document.getElementById("message-" + snapshot.key);
+      if (messageElement) {
+        messageElement.classList.add("deleted-message");
+        messageElement.innerHTML = "This message has been removed";
+      }
+    });
+
+    function toggleMenu() {
+      var menuOptions = document.getElementById("menu-options");
+      menuOptions.style.display = menuOptions.style.display === "none" ? "block" : "none";
+    }
+
+    function createGroup() {
+      // Logic for creating a group
+      alert("Create Group");
+    }
+
+    function joinGroup() {
+      // Logic for joining a group
+      alert("Join Group");
+    }
+
+    function signOut() {
+      // Logic for signing out
+      alert("Sign Out");
+    }
+
+    function searchUser() {
+      // Logic for searching a user
+      alert("Search User");
+    }
+  </script>
+</body>
